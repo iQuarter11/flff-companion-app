@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { computeWeeklyAllPlay, type WeekScore } from "@/lib/analytics/all-play";
 import { computeSeasonLuck, type SeasonLuck } from "@/lib/analytics/luck";
+import { resolveHeadshotUrl } from "@/lib/player-cache/headshot";
 
 export type CurrentSeason = {
   id: number;
@@ -161,7 +162,7 @@ export async function getTradeBlock(): Promise<TradeBlockEntry[]> {
   const { data } = await supabase
     .from("trade_block")
     .select(
-      "id, added_by, fantasy_teams(id, name), player_identity_cache(id, full_name, position, nfl_team, headshot_url)"
+      "id, added_by, fantasy_teams(id, name), player_identity_cache(id, full_name, position, nfl_team, headshot_url, sleeper_id)"
     )
     .order("created_at", { ascending: false });
 
@@ -169,7 +170,14 @@ export async function getTradeBlock(): Promise<TradeBlockEntry[]> {
     id: number;
     added_by: string;
     fantasy_teams: { id: number; name: string };
-    player_identity_cache: { id: number; full_name: string | null; position: string | null; nfl_team: string | null; headshot_url: string | null };
+    player_identity_cache: {
+      id: number;
+      full_name: string | null;
+      position: string | null;
+      nfl_team: string | null;
+      headshot_url: string | null;
+      sleeper_id: string | null;
+    };
   };
 
   return ((data ?? []) as unknown as Row[]).map((row) => ({
@@ -180,7 +188,7 @@ export async function getTradeBlock(): Promise<TradeBlockEntry[]> {
     playerName: row.player_identity_cache.full_name ?? "Unknown player",
     position: row.player_identity_cache.position,
     nflTeam: row.player_identity_cache.nfl_team,
-    headshotUrl: row.player_identity_cache.headshot_url,
+    headshotUrl: resolveHeadshotUrl(row.player_identity_cache),
     addedBy: row.added_by,
   }));
 }
