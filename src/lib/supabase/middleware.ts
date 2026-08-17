@@ -10,6 +10,8 @@ const PROTECTED_PREFIXES = [
   "/history",
   "/teams",
   "/profile",
+  "/chat",
+  "/dev",
 ];
 
 /**

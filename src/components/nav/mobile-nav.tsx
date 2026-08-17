@@ -7,7 +7,9 @@ export function MobileNav() {
       {PRIMARY_NAV.map((item) => (
         <NavLink
           key={item.href}
-          item={item}
+          href={item.href}
+          label={item.label}
+          icon={<item.icon className="size-5 shrink-0" aria-hidden="true" />}
           exact={item.href === "/"}
           className="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium"
           activeClassName="text-accent"

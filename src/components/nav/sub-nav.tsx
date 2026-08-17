@@ -7,7 +7,9 @@ export function SubNav({ items }: { items: NavItem[] }) {
       {items.map((item) => (
         <NavLink
           key={item.href}
-          item={item}
+          href={item.href}
+          label={item.label}
+          icon={null}
           exact
           className="whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors"
           activeClassName="border-accent text-foreground"

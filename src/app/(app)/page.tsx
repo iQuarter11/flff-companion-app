@@ -12,7 +12,6 @@ import {
 } from "@/lib/league/queries";
 import { getTrendingPlayerIds } from "@/lib/sleeper/trending";
 import { getPlayersBySleeperIds } from "@/lib/player-cache/queries";
-import { SleeperUnavailableError } from "@/lib/sleeper/client";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +48,11 @@ export default async function HomePage() {
       trendingName = identity?.full_name ?? null;
     }
   } catch (e) {
-    if (!(e instanceof SleeperUnavailableError)) throw e;
+    // This is a decorative quick-card, not core page content — a failure
+    // here (Sleeper down, player_identity_cache not migrated yet, a
+    // transient Supabase error) should never take down the whole Home
+    // page. Log server-side so it's still visible, but never rethrow.
+    console.error("Home page trending card failed to load:", e);
   }
 
   return (

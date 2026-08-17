@@ -18,7 +18,9 @@ export function Sidebar({ email }: { email: string | null }) {
         {PRIMARY_NAV.map((item) => (
           <NavLink
             key={item.href}
-            item={item}
+            href={item.href}
+            label={item.label}
+            icon={<item.icon className="size-5 shrink-0" aria-hidden="true" />}
             exact={item.href === "/"}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors"
             activeClassName="bg-accent/10 text-accent"
@@ -31,7 +33,9 @@ export function Sidebar({ email }: { email: string | null }) {
         {UTILITY_NAV.map((item) => (
           <NavLink
             key={item.href}
-            item={item}
+            href={item.href}
+            label={item.label}
+            icon={<item.icon className="size-5 shrink-0" aria-hidden="true" />}
             className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors"
             activeClassName="bg-accent/10 text-accent"
             inactiveClassName="text-muted hover:bg-black/[.03] hover:text-foreground dark:hover:bg-white/[.04]"
