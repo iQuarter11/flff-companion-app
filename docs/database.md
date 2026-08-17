@@ -5,6 +5,11 @@ Supabase SQL Editor (or the Supabase CLI once you set that up). Each file is
 idempotent (`create table if not exists`, `drop policy if exists` before
 `create policy`, etc.) so re-running is safe.
 
+For pasting into the SQL Editor, `supabase/combined_migrations.sql` is all
+of them concatenated in order — regenerate it with `npm run db:combine`
+after adding a new migration file. It's generated output; don't hand-edit
+it, and `supabase/migrations/*.sql` stays the actual source of truth.
+
 ## Tables so far
 
 ### `profiles` (0001_profiles.sql)

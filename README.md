@@ -85,27 +85,26 @@ Fill in:
 
 ### 4. Run the database migrations
 
-In the Supabase dashboard, open the **SQL Editor** and run every file in
-`supabase/migrations/`, **in numeric order** (0001 through 0011 as of this
-writing — check the folder for the current count):
+**This step is required before any data-driven page (Home, League, Players,
+Trade Block, /dev/espn, etc.) will work.** Skipping it is the #1 cause of
+"table not found" / "Could not find the table 'public.X' in the schema
+cache" errors.
 
-```
-0001_profiles.sql
-0002_player_identity_cache.sql
-0003_league_data.sql
-0004_watchlist.sql
-0005_trade_block.sql
-0006_power_rankings.sql
-0007_fantasy_teams_final_rank.sql
-0008_chat.sql
-0009_weekly_recaps.sql
-0010_youtube.sql
-0011_profiles_unique_team.sql
-```
+In the Supabase dashboard, open the **SQL Editor**, open
+`supabase/combined_migrations.sql` from this repo, paste its **entire**
+contents into one query, and click **Run**. That's every migration
+(0001-0011 as of this writing) in one idempotent script — safe to re-run
+if you're ever unsure whether it's already been applied.
 
-Each migration is idempotent (safe to re-run). Paste each file's contents
-into the SQL Editor and run it — no CLI or project linking required,
-though `supabase db push` works too if you've set that up.
+(The individual files in `supabase/migrations/` are the source of truth if
+you're using the Supabase CLI / `supabase db push` instead — the combined
+file is regenerated from them and shouldn't be hand-edited.)
+
+**Verify it worked**: in the Supabase dashboard, go to **Table Editor** and
+confirm you see tables like `profiles`, `leagues`, `sync_runs`, and
+`player_identity_cache`. If they're not there, the SQL Editor run above
+either didn't complete or errored partway through — check for a red error
+in the SQL Editor's output.
 
 ### 5. Enable email/password auth
 
@@ -233,9 +232,13 @@ vitest.config.mts
 
 - **"Missing or invalid Supabase public environment variables"** — fill in
   `.env.local` and restart `npm run dev`.
-- **Any page says it couldn't load data / a table doesn't exist** — you're
-  missing a migration; check the error for the table name and match it
-  against the list in step 4 above.
+- **Any page says it couldn't load data / a table doesn't exist** (e.g.
+  "Could not find the table 'public.X' in the schema cache") — run
+  `supabase/combined_migrations.sql` (see step 4 above); it hasn't been
+  applied to this Supabase project yet.
+- **Media page says "No YouTube channels configured"** — same cause:
+  migration `0010_youtube.sql` (part of the combined script) seeds one
+  channel; it just hasn't run yet.
 - **`/dev/espn` shows an amber "mock data" banner** — `ESPN_LEAGUE_ID`,
   `ESPN_SWID`, or `ESPN_S2` isn't set. Expected until configured; see
   `docs/espn-integration.md`.
