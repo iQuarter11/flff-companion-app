@@ -19,13 +19,22 @@ with no profile row.
 | `id` | PK, FK to `auth.users.id` |
 | `display_name` | editable in `/profile` |
 | `username` | unique, `^[a-z0-9_]{3,24}$` |
-| `espn_team_id` | which ESPN fantasy team this person owns (Phase 2 links this to real roster data) |
+| `espn_team_id` | which ESPN fantasy team this person owns — set via a dropdown on `/profile` (`getClaimableTeams()` in `src/lib/league/queries.ts`), not free text |
 | `avatar_url` | not yet editable in the UI |
 
 RLS: any authenticated user can read all profiles (needed for team/owner
 display throughout the app); only the owning user can insert/update their
 own row. Never trust a client-supplied user ID for writes — the update
 always targets `auth.uid()`.
+
+`espn_team_id` also has a unique constraint (0011_profiles_unique_team.sql)
+so two users can't claim the same team — Postgres unique constraints treat
+NULLs as distinct, so any number of profiles can still be unclaimed. The
+Server Action (`src/app/(app)/profile/actions.ts`) re-validates the
+selected team is real and unclaimed before writing (the `<select>` only
+lists valid, unclaimed-or-mine options, but that's client state, not a
+guarantee), and the DB constraint is the final backstop for a race between
+two simultaneous claims.
 
 ### `player_identity_cache` (0002_player_identity_cache.sql)
 

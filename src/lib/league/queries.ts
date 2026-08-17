@@ -465,6 +465,40 @@ export async function getRecap(week?: number): Promise<StoredRecap | null> {
   return { week: data.week, createdAt: data.created_at, payload: data.payload };
 }
 
+export type ClaimableTeam = {
+  espnTeamId: number;
+  name: string;
+  claimedByDisplayName: string | null; // null = unclaimed or claimed by the current user
+};
+
+/**
+ * Every team in the current season, annotated with whether another user
+ * has already claimed it (profiles.espn_team_id). Used to render a real
+ * team picker on /profile instead of a raw numeric ID field — a team
+ * claimed by someone else shows who and is disabled, not just hidden, so
+ * it's clear why it's unavailable.
+ */
+export async function getClaimableTeams(currentUserId: string): Promise<ClaimableTeam[]> {
+  const season = await getCurrentSeason();
+  if (!season) return [];
+
+  const supabase = await createClient();
+  const [{ data: teams }, { data: claims }] = await Promise.all([
+    supabase.from("fantasy_teams").select("espn_team_id, name").eq("season_id", season.id).order("name", { ascending: true }),
+    supabase.from("profiles").select("espn_team_id, display_name, username").not("espn_team_id", "is", null).neq("id", currentUserId),
+  ]);
+
+  const claimByTeamId = new Map(
+    (claims ?? []).map((c) => [c.espn_team_id as number, c.display_name ?? c.username ?? "another member"])
+  );
+
+  return (teams ?? []).map((t) => ({
+    espnTeamId: t.espn_team_id,
+    name: t.name,
+    claimedByDisplayName: claimByTeamId.get(t.espn_team_id) ?? null,
+  }));
+}
+
 export async function getWatchlistedPlayerIds(): Promise<Set<number>> {
   const supabase = await createClient();
   const {

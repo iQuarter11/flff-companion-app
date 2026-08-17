@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { getClaimableTeams } from "@/lib/league/queries";
 
 export type ProfileActionState = {
   error: string | null;
@@ -32,7 +33,23 @@ export async function updateProfile(
   }
 
   if (espnTeamIdRaw.length > 0 && (!Number.isInteger(espnTeamId) || espnTeamId === null || espnTeamId < 0)) {
-    return { error: "ESPN Team ID must be a whole number.", success: false };
+    return { error: "Invalid team selection.", success: false };
+  }
+
+  // The <select> only lists real teams and disables ones another user
+  // already claimed, but the value is still client-supplied — re-validate
+  // both facts server-side rather than trusting the DOM wasn't tampered
+  // with. The DB's unique constraint (0011) is the final backstop below.
+  if (espnTeamId !== null) {
+    const claimableTeams = await getClaimableTeams(user.id);
+    const team = claimableTeams.find((t) => t.espnTeamId === espnTeamId);
+
+    if (!team) {
+      return { error: "That team doesn't exist in the current season.", success: false };
+    }
+    if (team.claimedByDisplayName) {
+      return { error: `${team.name} is already claimed by ${team.claimedByDisplayName}.`, success: false };
+    }
   }
 
   // Ownership is derived from the authenticated session (auth.uid()), never
@@ -48,9 +65,16 @@ export async function updateProfile(
     .eq("id", user.id);
 
   if (error) {
+    // Unique violation on espn_team_id — someone else claimed the same
+    // team in the moment between our check above and this write.
+    if (error.code === "23505" && error.message.includes("espn_team_id")) {
+      return { error: "That team was just claimed by someone else. Pick another.", success: false };
+    }
     return { error: error.message, success: false };
   }
 
   revalidatePath("/profile");
+  revalidatePath("/");
+  revalidatePath("/trades");
   return { error: null, success: true };
 }

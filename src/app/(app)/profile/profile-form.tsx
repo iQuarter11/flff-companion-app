@@ -3,10 +3,11 @@
 import { useActionState } from "react";
 import { updateProfile, type ProfileActionState } from "./actions";
 import type { Profile } from "./page";
+import type { ClaimableTeam } from "@/lib/league/queries";
 
 const initialState: ProfileActionState = { error: null, success: false };
 
-export function ProfileForm({ profile }: { profile: Profile }) {
+export function ProfileForm({ profile, claimableTeams }: { profile: Profile; claimableTeams: ClaimableTeam[] }) {
   const [state, formAction, isPending] = useActionState(updateProfile, initialState);
 
   return (
@@ -38,19 +39,32 @@ export function ProfileForm({ profile }: { profile: Profile }) {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="espn_team_id" className="text-sm font-medium">
-          ESPN Team ID
+          Your team
         </label>
-        <input
-          id="espn_team_id"
-          name="espn_team_id"
-          type="number"
-          min={0}
-          defaultValue={profile.espn_team_id ?? ""}
-          className="rounded-md border border-surface-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
-        />
-        <span className="text-xs text-muted">
-          Your ESPN fantasy team ID within this league (used once ESPN sync is connected in Phase 2).
-        </span>
+
+        {claimableTeams.length === 0 ? (
+          <p className="text-xs text-muted">
+            No teams synced yet — once someone runs a sync from /dev/espn, you&apos;ll be able to pick your team here.
+          </p>
+        ) : (
+          <>
+            <select
+              id="espn_team_id"
+              name="espn_team_id"
+              defaultValue={profile.espn_team_id ?? ""}
+              className="rounded-md border border-surface-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+            >
+              <option value="">— Not selected —</option>
+              {claimableTeams.map((team) => (
+                <option key={team.espnTeamId} value={team.espnTeamId} disabled={team.claimedByDisplayName !== null}>
+                  {team.name}
+                  {team.claimedByDisplayName ? ` (claimed by ${team.claimedByDisplayName})` : ""}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-muted">Which of the 12 league teams is yours. Each team can only be claimed once.</span>
+          </>
+        )}
       </div>
 
       {state.error ? <p className="text-sm text-red-500">{state.error}</p> : null}

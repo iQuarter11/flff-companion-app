@@ -86,7 +86,7 @@ Fill in:
 ### 4. Run the database migrations
 
 In the Supabase dashboard, open the **SQL Editor** and run every file in
-`supabase/migrations/`, **in numeric order** (0001 through 0010 as of this
+`supabase/migrations/`, **in numeric order** (0001 through 0011 as of this
 writing — check the folder for the current count):
 
 ```
@@ -100,6 +100,7 @@ writing — check the folder for the current count):
 0008_chat.sql
 0009_weekly_recaps.sql
 0010_youtube.sql
+0011_profiles_unique_team.sql
 ```
 
 Each migration is idempotent (safe to re-run). Paste each file's contents
@@ -120,9 +121,11 @@ npm run dev
 ```
 
 Visit `http://localhost:3000`. You'll be redirected to `/login`; use
-**Sign up** to create the first account, then set your **ESPN Team ID** in
-`/profile` (needed for the Trade Block and the Home page's "Current Week"
-card to know which team is yours).
+**Sign up** to create the first account, then pick **your team** from the
+dropdown in `/profile` (populated from synced league data — run a sync
+from `/dev/espn` first if the list is empty). Needed for the Trade Block
+and the Home page's "Current Week" card to know which team is yours. Each
+team can only be claimed by one account.
 
 ### 7. Populate real data
 

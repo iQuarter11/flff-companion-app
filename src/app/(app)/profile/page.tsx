@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getClaimableTeams } from "@/lib/league/queries";
 import { ProfileForm } from "./profile-form";
 
 export type Profile = {
@@ -35,13 +36,15 @@ export default async function ProfilePage() {
     );
   }
 
+  const claimableTeams = await getClaimableTeams(user.id);
+
   return (
     <div className="max-w-lg">
       <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
       <p className="mt-1 text-sm text-muted">{user.email}</p>
 
       <div className="mt-6 rounded-xl border border-surface-border bg-surface p-6">
-        <ProfileForm profile={profile} />
+        <ProfileForm profile={profile} claimableTeams={claimableTeams} />
       </div>
 
       <div className="mt-6 flex items-center justify-between rounded-xl border border-surface-border bg-surface p-4 text-sm">
