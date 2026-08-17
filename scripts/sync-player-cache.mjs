@@ -1,5 +1,12 @@
-import 'dotenv/config';
+import { join } from 'node:path';
+import { config } from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
+
+// The rest of this project uses `.env.local` (Next.js's convention), not
+// plain `.env` — load it explicitly. Without this, running
+// `npm run sync:players` standalone fails with "Missing
+// NEXT_PUBLIC_SUPABASE_URL" even though .env.local has it.
+config({ path: join(import.meta.dirname, '..', '.env.local') });
 
 // Reuses the same public URL as the Next.js app (it's not secret) so this
 // script only needs one extra credential: the service-role key.
