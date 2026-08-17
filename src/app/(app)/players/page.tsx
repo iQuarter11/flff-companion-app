@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTrendingPlayerIds, type TrendingDirection } from "@/lib/sleeper/trending";
 import { getPlayersBySleeperIds } from "@/lib/player-cache/queries";
+import { sleeperHeadshotUrl } from "@/lib/player-cache/headshot";
 import { getRosterOwnership, getWatchlistedPlayerIds } from "@/lib/league/queries";
 import { SleeperUnavailableError } from "@/lib/sleeper/client";
 import { PlayerHeadshot } from "@/components/players/player-headshot";
@@ -101,11 +102,12 @@ export default async function TrendingPlayersPage({
           {rows.map((row, index) => {
             const owner = row.identity?.espn_id ? ownership.get(row.identity.espn_id) : undefined;
             const name = row.identity?.full_name ?? `Sleeper #${row.sleeperId}`;
+            const headshotSrc = row.identity?.headshot_url ?? sleeperHeadshotUrl(row.sleeperId);
 
             return (
               <li key={row.sleeperId} className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface p-3">
                 <span className="w-6 shrink-0 text-center text-sm font-semibold text-muted">{index + 1}</span>
-                <PlayerHeadshot src={row.identity?.headshot_url ?? null} name={name} size={40} />
+                <PlayerHeadshot src={headshotSrc} name={name} size={40} />
 
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{name}</p>

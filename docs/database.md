@@ -44,9 +44,21 @@ two simultaneous claims.
 ### `player_identity_cache` (0002_player_identity_cache.sql)
 
 Maps Sleeper player IDs to ESPN player IDs, holding the union of the top
-1,000 fantasy-relevant players from each platform. This table predates the
-rest of the app (see the original `fantasy-player-cache/` prototype) and was
-carried over as-is because the design and sync script were already working.
+~1,000 ESPN players and the ~2,500 Sleeper players that have a real
+`search_rank` at all (via `ESPN_CACHE_LIMIT` / `SLEEPER_CACHE_LIMIT`,
+defaulting to 1000 / 3000 respectively — see `scripts/sync-player-cache.mjs`).
+This table predates the rest of the app (see the original
+`fantasy-player-cache/` prototype) and was carried over as-is because the
+design and sync script were already working.
+
+The Sleeper-side limit is intentionally higher than ESPN's: Sleeper's
+`search_rank` has heavy ties (many players sharing the same rank number),
+so slicing to a fixed array position after sorting is unstable — it can
+exclude a legitimately rank-690 player over an arbitrary alphabetical
+tie-break while including less relevant ones. 3000 comfortably covers the
+entire ranked pool (only ~2,500 Sleeper players have a real rank; the rest
+are unranked and not meaningfully fantasy-relevant), so the cutoff no
+longer depends on winning ties.
 
 Primary identity path:
 
@@ -56,6 +68,10 @@ Sleeper player_id -> player_identity_cache -> espn_id -> ESPN headshot
 
 Name matching is **not** used for identity resolution except as an
 explicitly marked fallback (`mapping_source`) — IDs are the source of truth.
+When a player has a Sleeper ID but no ESPN headshot (unmapped, or outside
+the cache entirely), the UI falls back to Sleeper's own headshot CDN
+(`resolveHeadshotUrl()` / `sleeperHeadshotUrl()` in
+`src/lib/player-cache/headshot.ts`) before showing the generic silhouette.
 
 | column | notes |
 |---|---|

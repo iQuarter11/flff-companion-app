@@ -1,4 +1,5 @@
 import { searchPlayers } from "@/lib/player-cache/queries";
+import { resolveHeadshotUrl } from "@/lib/player-cache/headshot";
 import { getRosterOwnership, getWatchlistedPlayerIds } from "@/lib/league/queries";
 import { PlayerHeadshot } from "@/components/players/player-headshot";
 import { WatchlistButton } from "@/components/players/watchlist-button";
@@ -49,7 +50,7 @@ export default async function PlayerSearchPage({
 
             return (
               <li key={player.id} className="flex items-center gap-3 rounded-lg border border-surface-border bg-surface p-3">
-                <PlayerHeadshot src={player.headshot_url} name={name} size={40} />
+                <PlayerHeadshot src={resolveHeadshotUrl(player)} name={name} size={40} />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{name}</p>
                   <p className="text-xs text-muted">

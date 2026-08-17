@@ -16,8 +16,40 @@ const ESPN_SEASON = Number(process.env.ESPN_SEASON || new Date().getFullYear());
 const ESPN_LEAGUE_ID = process.env.ESPN_LEAGUE_ID;
 const ESPN_SWID = process.env.ESPN_SWID;
 const ESPN_S2 = process.env.ESPN_S2;
-const LIMIT = Number(process.env.CACHE_LIMIT_PER_PLATFORM || 1000);
+// Sleeper's search_rank has heavy ties (hundreds of players sharing the
+// same rank number), so a plain "top 1000 by array position after sorting"
+// cut is unstable — it can exclude a legitimately rank-690 player because
+// of an arbitrary alphabetical tie-break, while including less-relevant
+// ones. Empirically, only ~2,500 Sleeper players have a real search_rank
+// at all (everything past that is unranked / not fantasy-relevant), so the
+// default here covers the whole ranked pool rather than an arbitrary slice
+// of it. ESPN's rank pool doesn't have this tie problem, so it keeps a
+// separate, smaller default.
+const SLEEPER_LIMIT = Number(process.env.SLEEPER_CACHE_LIMIT || process.env.CACHE_LIMIT_PER_PLATFORM || 3000);
+const ESPN_LIMIT = Number(process.env.ESPN_CACHE_LIMIT || process.env.CACHE_LIMIT_PER_PLATFORM || 1000);
 const ESPN_RANK_TYPE = process.env.ESPN_RANK_TYPE || 'STANDARD';
+
+// Same mappings as src/lib/espn/constants.ts — duplicated here because
+// this script runs standalone (plain Node, not compiled through the
+// Next.js/TS app). Keep the two in sync if either changes. Unknown ids
+// fall back to POS_<id> / null rather than a wrong guess.
+const ESPN_POSITION_MAP = { 1: 'QB', 2: 'RB', 3: 'WR', 4: 'TE', 5: 'K', 16: 'DST' };
+function mapEspnPosition(defaultPositionId) {
+  if (!defaultPositionId) return null;
+  return ESPN_POSITION_MAP[defaultPositionId] || `POS_${defaultPositionId}`;
+}
+
+const ESPN_PRO_TEAM_MAP = {
+  1: 'ATL', 2: 'BUF', 3: 'CHI', 4: 'CIN', 5: 'CLE', 6: 'DAL', 7: 'DEN', 8: 'DET',
+  9: 'GB', 10: 'TEN', 11: 'IND', 12: 'KC', 13: 'LV', 14: 'LAR', 15: 'MIA', 16: 'MIN',
+  17: 'NE', 18: 'NO', 19: 'NYG', 20: 'NYJ', 21: 'PHI', 22: 'ARI', 23: 'PIT', 24: 'LAC',
+  25: 'SF', 26: 'SEA', 27: 'TB', 28: 'WSH', 29: 'CAR', 30: 'JAX', 33: 'BAL', 34: 'HOU'
+};
+function mapEspnProTeam(proTeamId) {
+  // 0 = free agent in ESPN's system, not an unmapped id — correctly null either way.
+  if (!proTeamId) return null;
+  return ESPN_PRO_TEAM_MAP[proTeamId] || null;
+}
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
@@ -69,7 +101,7 @@ async function getSleeperTopPlayers() {
       if (ar !== br) return ar - br;
       return String(a.full_name || '').localeCompare(String(b.full_name || ''));
     })
-    .slice(0, LIMIT);
+    .slice(0, SLEEPER_LIMIT);
 
   return candidates.map((p, index) => ({
     sleeper_id: String(p.player_id),
@@ -82,6 +114,8 @@ async function getSleeperTopPlayers() {
     status: p.status || null,
     headshot_url: espnHeadshotUrl(toInt(p.espn_id)),
     sleeper_rank: index + 1,
+    // Column name predates SLEEPER_LIMIT being raised past 1000; it now
+    // means "in the synced Sleeper pool", not literally top-1000.
     in_sleeper_top_1000: true,
     mapping_source: p.espn_id ? 'sleeper:espn_id' : 'sleeper:unmapped',
     sleeper_updated_at: new Date().toISOString()
@@ -91,7 +125,7 @@ async function getSleeperTopPlayers() {
 function buildEspnHeaders() {
   const fantasyFilter = {
     players: {
-      limit: LIMIT,
+      limit: ESPN_LIMIT,
       sortDraftRanks: {
         sortPriority: 100,
         sortAsc: true,
@@ -138,8 +172,8 @@ function normalizeEspnPlayer(entry, index) {
     full_name: normalizeName(firstName, lastName, fullName),
     first_name: firstName,
     last_name: lastName,
-    position: p.defaultPositionId ? String(p.defaultPositionId) : null,
-    nfl_team: proTeamId ? String(proTeamId) : null,
+    position: mapEspnPosition(p.defaultPositionId),
+    nfl_team: mapEspnProTeam(proTeamId),
     status: p.injuryStatus || null,
     headshot_url: espnHeadshotUrl(id),
     espn_rank: index + 1,
@@ -168,7 +202,7 @@ async function getEspnTopPlayers() {
   }
 
   const players = extractEspnPlayers(payload)
-    .slice(0, LIMIT)
+    .slice(0, ESPN_LIMIT)
     .map(normalizeEspnPlayer)
     .filter(Boolean);
 
@@ -265,7 +299,7 @@ async function resetCoverageFlags() {
 }
 
 async function main() {
-  console.log(`Syncing up to ${LIMIT} ESPN + ${LIMIT} Sleeper players for ${ESPN_SEASON}...`);
+  console.log(`Syncing up to ${ESPN_LIMIT} ESPN + ${SLEEPER_LIMIT} Sleeper players for ${ESPN_SEASON}...`);
   const [sleeperRows, espnRows] = await Promise.all([
     getSleeperTopPlayers(),
     getEspnTopPlayers()
