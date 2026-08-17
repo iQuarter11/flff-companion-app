@@ -19,7 +19,7 @@ const serverEnvSchema = z.object({
   ESPN_SWID: z.string().optional(),
   ESPN_S2: z.string().optional(),
   YOUTUBE_API_KEY: z.string().optional(),
-  SYNC_SECRET: z.string().optional(),
+  CRON_SECRET: z.string().optional(),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
@@ -63,7 +63,7 @@ export function getServerEnv(): ServerEnv {
     ESPN_SWID: process.env.ESPN_SWID,
     ESPN_S2: process.env.ESPN_S2,
     YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY,
-    SYNC_SECRET: process.env.SYNC_SECRET,
+    CRON_SECRET: process.env.CRON_SECRET,
   });
 
   if (!parsed.success) {

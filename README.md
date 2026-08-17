@@ -77,8 +77,11 @@ Fill in:
 - `ESPN_SWID`, `ESPN_S2` — see `docs/espn-integration.md` for how to get
   these from a logged-in browser session. Without them, `/dev/espn` falls
   back to visibly-labeled mock data instead of failing.
-- `SYNC_SECRET` — bearer token that protects `POST /api/sync/espn`.
-  Generate one with `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`.
+- `CRON_SECRET` — bearer token that protects `/api/sync/espn`, the route
+  Vercel Cron calls automatically once deployed (see "Automatic sync"
+  below). Must be named exactly `CRON_SECRET` — Vercel auto-attaches it to
+  cron requests. Generate one with
+  `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"`.
 - `YOUTUBE_API_KEY` — optional. Media works without it (RSS fallback).
 
 `.env.local` is gitignored. Never commit it.
@@ -138,6 +141,33 @@ a recap for the most recently completed week). Click **Sync historical
 seasons** once, whenever convenient, to populate Champions/Records/
 Rivalries — it's several large ESPN requests, so it's slower and meant to
 be run occasionally, not on every sync.
+
+## Automatic sync
+
+Once deployed to Vercel, `/api/sync/espn` runs on a schedule via
+[Vercel Cron](https://vercel.com/docs/cron-jobs), defined in `vercel.json`
+— no manual "Run sync now" clicking needed day to day. It does the same
+three things the debug page's button does: pulls current-season data,
+recomputes power rankings, and generates a recap for the most recently
+completed week.
+
+- **Requires `CRON_SECRET`** set in Vercel's project env vars (same value
+  works locally and in production, or use different ones — just make sure
+  Vercel's matches what's deployed).
+- **Default schedule**: once daily, `0 13 * * *` (13:00 UTC) — edit the
+  `schedule` field in `vercel.json` to change it
+  ([crontab syntax](https://crontab.guru/)).
+- **Vercel Hobby (free) plan**: cron jobs are limited to once per day, and
+  Vercel doesn't guarantee an exact trigger time (documented as "up to an
+  hour" of slack). That means scores won't update live during Sunday/
+  Monday games on the free tier — good enough for standings/rosters/
+  recaps refreshing daily, not for live scoring. Vercel Pro allows more
+  frequent schedules if you want closer-to-live updates during game
+  windows; this app doesn't require Pro otherwise.
+- **Local dev**: cron doesn't run locally — use the `/dev/espn` button or
+  `curl -X POST -H "Authorization: Bearer $CRON_SECRET" http://localhost:3000/api/sync/espn`.
+- Historical season sync stays manual-only (`/dev/espn`'s other button) —
+  it's several large one-off requests, not something to run on a schedule.
 
 ## Running tests
 
@@ -216,9 +246,10 @@ vitest.config.mts
   read exclusively through `getServerEnv()` / `createAdminClient()`.
 - `src/lib/supabase/admin.ts` imports the `server-only` package, which
   turns an accidental client-side import into a build error.
-- `POST /api/sync/espn` requires a `SYNC_SECRET` bearer token. The
-  `/dev/espn` page's "Run sync now" button doesn't call this route; it
-  runs the sync via a Server Action instead, so `SYNC_SECRET` never has to
+- `/api/sync/espn` requires a `CRON_SECRET` bearer token — Vercel Cron
+  supplies it automatically, nothing else can call this route without it.
+  The `/dev/espn` page's "Run sync now" button doesn't call this route; it
+  runs the sync via a Server Action instead, so `CRON_SECRET` never has to
   reach the browser.
 - Row Level Security is enabled on every table from the migration that
   creates it — including chat, trade block, and watchlist, which are the
@@ -256,20 +287,19 @@ vitest.config.mts
    Framework preset auto-detects Next.js — no config changes needed.
 3. **Environment variables**: in Vercel's project settings, add every
    variable from `.env.example` with production values. Use a
-   **different** `SUPABASE_SERVICE_ROLE_KEY` / `SYNC_SECRET` than local if
+   **different** `SUPABASE_SERVICE_ROLE_KEY` / `CRON_SECRET` than local if
    you're using a separate production Supabase project (recommended).
-   Set `NEXT_PUBLIC_SITE_URL` to your Vercel URL.
+   Set `NEXT_PUBLIC_SITE_URL` to your Vercel URL. `CRON_SECRET` must be
+   named exactly that for Vercel Cron to authenticate automatically (see
+   "Automatic sync" above).
 4. **Supabase**: either point production at the same project used in
-   development, or create a separate one and re-run every migration in
-   `supabase/migrations/` (in order) against it via the SQL Editor.
+   development, or create a separate one and run
+   `supabase/combined_migrations.sql` against it via the SQL Editor.
 5. **Auth redirect**: in Supabase, **Authentication -> URL Configuration**,
    add your Vercel URL to the allowed redirect URLs (needed for the email
    confirmation flow to work in production).
-6. **Cron (optional)**: `POST /api/sync/espn` is ready for Vercel Cron —
-   add a `vercel.json` cron entry pointing at it with the `SYNC_SECRET`
-   bearer token, once you're ready to automate syncing instead of using
-   the `/dev/espn` button.
-
-Not done yet: this hasn't actually been pushed to GitHub or deployed —
-that's a deliberate stopping point since both are visible, external
-actions on your accounts.
+6. **Cron**: already configured — `vercel.json` defines a daily schedule
+   hitting `/api/sync/espn` once `CRON_SECRET` is set in Vercel. Check
+   **Project -> Cron Jobs** in the Vercel dashboard to confirm it's
+   registered after deploying, and see "Automatic sync" above for the
+   Hobby-plan cadence limits.

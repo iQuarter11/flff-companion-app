@@ -16,8 +16,9 @@ export type SyncActionState = {
 /**
  * Runs the sync directly server-side (this page is already behind the
  * (app) auth gate) — deliberately not going through /api/sync/espn, so the
- * SYNC_SECRET used to protect that public endpoint never needs to reach
- * the browser.
+ * CRON_SECRET used to protect that public endpoint never needs to reach
+ * the browser. /api/sync/espn is now also called automatically by Vercel
+ * Cron (see vercel.json) — this button is for on-demand syncs in between.
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- required by useActionState's (state, ...) signature
 export async function triggerSync(_prevState: SyncActionState): Promise<SyncActionState> {

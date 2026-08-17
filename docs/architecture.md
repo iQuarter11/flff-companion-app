@@ -87,11 +87,16 @@ else reads from Supabase, written by `src/lib/sync/`. Every ESPN
 `sync_runs` row records status/timing/error so failures are visible
 instead of silent (surfaced on `/dev/espn`). Sleeper trending is fetched
 live per-request (small, fast, no credentials — different cost profile
-than ESPN's 2MB+ payload) rather than pre-synced. Not yet on an automatic
-schedule — currently triggered manually via `/dev/espn`, `/media`'s
-refresh button, or `POST /api/sync/espn`; wiring that route to Vercel Cron
-is noted in the README's deploy section as a next step, not something this
-build did.
+than ESPN's 2MB+ payload) rather than pre-synced.
+
+ESPN sync runs automatically once deployed: `vercel.json` defines a daily
+Vercel Cron job hitting `/api/sync/espn` (bearer-token protected via
+`CRON_SECRET`, which Vercel attaches to cron requests automatically). The
+`/dev/espn` "Run sync now" button and `POST /api/sync/espn` still work for
+on-demand syncs in between. See the README's "Automatic sync" section for
+the Hobby-plan cadence limit (once/day) and how to change the schedule.
+Historical season sync and the media refresh button stay manual-only —
+neither needs to run on a fixed schedule.
 
 ## Rendering strategy
 

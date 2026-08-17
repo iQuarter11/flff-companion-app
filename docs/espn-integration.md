@@ -105,11 +105,12 @@ values themselves.
 Pages never call ESPN directly. `src/lib/sync/league.ts` fetches and
 normalizes the league, then upserts into the tables from
 `0003_league_data.sql`, recording a `sync_runs` row either way. Triggered
-via `POST /api/sync/espn` (bearer-token protected, suitable for a future
-cron job) or the `/dev/espn` debug page's "Run sync now" button (a Server
-Action, so the app never needs to send the sync secret to the browser).
-Regular app pages (once Phase 2's UI lands beyond the debug page) will read
-from Supabase, not ESPN directly.
+automatically once daily by Vercel Cron (`GET /api/sync/espn`, see
+`vercel.json` and the README's "Automatic sync" section), or on demand via
+the `/dev/espn` debug page's "Run sync now" button (a Server Action, so
+the app never needs to send `CRON_SECRET` to the browser) or a manual
+`POST` to the same route. Regular app pages read from Supabase, not ESPN
+directly.
 
 ## Error handling
 
